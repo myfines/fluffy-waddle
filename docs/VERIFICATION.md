@@ -20,6 +20,6 @@
 
 上手与政变：右侧面板默认选中南方地区，分为“治理/政变”两页签；治理页提供三步引导、下一步建议、行动成本/效果和禁用原因，政变页提供10支部队选择器、首都/电台/军营三个目的地按钮、移动提示和页内反馈。新增10支全国部队（政府5、政变3、中立2）。政变测试覆盖全国冻结、反政变方权限、政变方玩家越权拒绝、中立禁止、AI调集、三处控制点不同结果、反政变胜利解锁和政变方胜利失败。
 
-公开仓库：远端为 `git@github.com:myfines/fluffy-waddle.git`，当前 `master` 已推送到 commit `0bf1f6a`。由于本机 SSH 公钥认证失败，本次使用同一 GitHub 地址的一次性 HTTPS push 完成上传，origin 配置仍保持用户提供的 SSH 地址。仓库不包含未知许可的710轮廓、派生轮廓、exe、release 或 Godot缓存；干净 clone 使用许可明确的 `data/demo_regions.json` 启动，且干净 clone 治理测试通过。
+公开仓库：远端为 `git@github.com:myfines/fluffy-waddle.git`，当前 `master` 已推送到 commit `287c958`。由于本机 SSH 公钥认证失败，本次使用同一 GitHub 地址的一次性 HTTPS push 完成上传，origin 配置仍保持用户提供的 SSH 地址。仓库不包含未知许可的710轮廓、派生轮廓、exe、release 或 Godot缓存；干净 clone 使用许可明确的 `data/demo_regions.json` 启动，且干净 clone 治理测试通过。
 
 清理记录：本轮只移除了可明确归因于本轮截图生成的未跟踪 `docs/coup-preview.png.import`（945 bytes）；用户原有构建和 stage1 版本均保留。清理后工作区（含本地数据/构建）约 717,854,343 bytes，`builds` 目录约 563,819,736 bytes，最新版治理 exe 为 114,935,352 bytes。
