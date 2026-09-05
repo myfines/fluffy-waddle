@@ -1,0 +1,14 @@
+.godot/
+builds/
+release/
+*.tmp
+*.log
+user://
+*.exe
+*.console.exe
+data/frontier_regions.json
+data/design_regions.json
+data/vietnam_*.json
+data/*.png
+data/*.png.import
+tools/*.uid
