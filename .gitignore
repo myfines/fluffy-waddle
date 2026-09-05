@@ -11,4 +11,5 @@ data/design_regions.json
 data/vietnam_*.json
 data/*.png
 data/*.png.import
+docs/coup-preview.png.import
 tools/*.uid

@@ -36,6 +36,7 @@ func run() -> void:
 	s.selected = north_index; s._action("support"); check(s.feedback.contains("外部压力"), "北方区域不可治理")
 	s.selected = 0
 	# Coup permissions are enforced in the shared move command, including AI.
+	s._select_unit(0); s._labels["CoupDest0"].emit_signal("pressed"); check(s.units[0].region == s.coup_key_regions[0], "政变页首都目的地按钮调用统一调动命令")
 	s._trigger_coup(); check(s.coup_state == "active" and s.paused, "政变触发并冻结模拟")
 	var neutral_region: int = s.units[8].region; check(not s._move_unit_to_region(8, 0), "政变期间中立部队不可调动"); check(s.units[8].region == neutral_region, "中立部队位置保持冻结")
 	check(not s._move_unit_to_region(5, 0), "玩家不可越权调动政变方"); check(not s._move_unit_to_region(0, 1, "ai"), "AI不可越权调动政府部队"); check(not s._move_unit_to_region(0, 1, "unknown"), "未知执行者不可调动部队"); check(s._move_unit_to_region(0, s.coup_key_regions[0]), "反政变方部队可调动")

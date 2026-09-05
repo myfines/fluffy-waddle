@@ -199,8 +199,8 @@ func _build_controls() -> void:
 	for value in [1.0, 2.0, 4.0]:
 		var speed_button := Button.new(); speed_button.text = "%sx" % value; speed_button.pressed.connect(func(v=value): speed = v; _refresh_ui()); speed_row.add_child(speed_button)
 	var tabs := TabContainer.new(); tabs.name = "MainTabs"; tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL; box.add_child(tabs); _labels["MainTabs"] = tabs
-	var gov_box := VBoxContainer.new(); gov_box.name = "Governance"; gov_box.add_theme_constant_override("separation", 7); tabs.add_child(gov_box)
-	var coup_box := VBoxContainer.new(); coup_box.name = "Coup"; coup_box.add_theme_constant_override("separation", 7); tabs.add_child(coup_box)
+	var gov_box := VBoxContainer.new(); gov_box.name = "治理"; gov_box.add_theme_constant_override("separation", 7); tabs.add_child(gov_box)
+	var coup_box := VBoxContainer.new(); coup_box.name = "政变"; coup_box.add_theme_constant_override("separation", 7); tabs.add_child(coup_box)
 	gov_box.add_child(_label("ModeTitle", "地图显示：阵营 / 民心 / 叛乱", 14, Color("f4d47d")))
 	gov_box.add_child(_label("Legend", "图例：青色=南方　红色=北方/高叛乱　民心模式由红到绿", 11, Color("a9b9bd")))
 	var focus_south := Button.new(); focus_south.name = "FocusSouth"; focus_south.text = "聚焦南方治理区"; focus_south.pressed.connect(_focus_south); gov_box.add_child(focus_south); _labels["FocusSouth"] = focus_south
@@ -218,6 +218,10 @@ func _build_controls() -> void:
 	for unit in units: unit_select.add_item("%s · %s" % [unit.name, _side_name(unit.side)], unit.id)
 	unit_select.item_selected.connect(func(index: int): _select_unit(unit_select.get_item_id(index)))
 	coup_box.add_child(unit_select); _labels["UnitSelect"] = unit_select
+	var destination_row := HBoxContainer.new(); coup_box.add_child(destination_row)
+	for i in 3:
+		var destination := Button.new(); destination.name = "CoupDest%d" % i; destination.text = "调往%s" % coup_key_names[i]; destination.pressed.connect(func(key_index=i): _move_selected_to_key(key_index)); destination_row.add_child(destination); _labels["CoupDest%d" % i] = destination
+	coup_box.add_child(_label("CoupFeedback", "政变页反馈：先选择政府部队", 11, Color("f4d47d")))
 	var selection_panel := PanelContainer.new(); selection_panel.name = "SelectionPanel"; selection_panel.add_theme_stylebox_override("panel", _style_panel(Color("18282d"), 6)); gov_box.add_child(selection_panel)
 	var selection_box := VBoxContainer.new(); selection_box.add_theme_constant_override("separation", 3); selection_panel.add_child(selection_box)
 	selection_box.add_child(_label("SelectionTitle", "选区详情", 14, Color("f4d47d")))
@@ -293,6 +297,11 @@ func _move_unit_to_region(unit_id: int, destination: int, actor := "player") -> 
 	units[unit_index].region = destination
 	if actor == "player": feedback = "%s已调往%s" % [unit.name, regions[destination].name]
 	_map_layer.queue_redraw(); _refresh_ui(); return true
+
+func _move_selected_to_key(key_index: int) -> void:
+	if selected_unit < 0 or key_index < 0 or key_index >= coup_key_regions.size():
+		feedback = "先在政变页选择一支政府部队"; _refresh_ui(); return
+	_move_unit_to_region(selected_unit, coup_key_regions[key_index])
 
 func _trigger_coup() -> void:
 	if ended or coup_state == "active": return
@@ -446,6 +455,7 @@ func _refresh_ui() -> void:
 	_labels["Factions"].text = "派系支持　军方 %d　地方官僚 %d　民间力量 %d" % [faction_support["军方"], faction_support["地方官僚"], faction_support["民间力量"]]
 	_labels["Status"].text = "稳定度 %d　·　%s" % [stability, "已结束" if ended else ("暂停" if paused else "推进中")]
 	_labels["Feedback"].text = "反馈：" + feedback
+	_labels["CoupFeedback"].text = "政变页反馈：" + feedback
 	_labels["CoupStatus"].text = "政变战局 · 控制点：" + _coup_key_display() if coup_state == "stable" else ("政变进度　反政变方 %d%%　政变方 %d%%　·　第%d周　控制点：%s" % [coup_progress["government"], coup_progress["coup"], coup_turns, _coup_key_display()] if coup_state == "active" else "政变已平息：全国部队解冻")
 	var pause_button: Button = _labels["PauseButton"]
 	pause_button.text = "已结束" if ended else ("继续模拟" if paused else "暂停模拟")
@@ -467,6 +477,8 @@ func _refresh_ui() -> void:
 	var coup_button: Button = _labels["CoupButton"]; coup_button.disabled = ended or coup_state == "active" or coup_state == "resolved"; coup_button.tooltip_text = "演示政变：全国部队先冻结，反政变方可调动" if coup_state == "stable" else "政变战局已启动或结束"
 	var unit_select: OptionButton = _labels["UnitSelect"]; unit_select.disabled = ended
 	for i in units.size(): unit_select.set_item_text(i, "%s · %s" % [units[i].name, _side_name(units[i].side)])
+	for i in 3:
+		var destination: Button = _labels["CoupDest%d" % i]; destination.disabled = ended or selected_unit < 0; destination.tooltip_text = "将已选反政变部队调往%s" % coup_key_names[i]
 
 func _terrain_name(terrain: String) -> String:
 	return {"highland": "高地", "delta": "三角洲", "coastal": "沿海"}.get(terrain, "平原")
