@@ -16,6 +16,8 @@
 
 导出：`powershell -ExecutionPolicy Bypass -File tools\build_windows.ps1` 生成 `builds\VietnamWar1965-governance.exe`；原有 `builds\VietnamWar1965-stage1.exe` 保留。
 
-性能验证：`--headless --path . --script res://tools/test_performance.gd` 在完整 710 地区上实测 `geometry_rebuild_ms=274.25`（主动重建成本）、缓存绘制命令 CPU 计时 P95 `26.50ms`，变换场景 CPU 计时 P95 `26.76ms`；这两个值不是旧版 FPS 对比。非 headless OpenGL Compatibility（NVIDIA GeForce RTX 3060 Laptop GPU）用 `tools/test_frame_performance.gd` 实测60个空闲帧 P50/P95 `16.61/17.51ms`，实际滚轮缩放与拖动路径60帧 P50/P95 `16.63/17.41ms`。地图现在只在加载、选择/行动或模式切换时更新 SubViewport 纹理，镜头变换只缩放/平移纹理；710 地区数据本身没有删减或降采样。
+性能验证：`--headless --path . --script res://tools/test_performance.gd` 在完整 710 地区上实测 `geometry_rebuild_ms=278.72`（主动重建成本）、缓存绘制命令 CPU 计时 P95 `28.00ms`，变换场景 CPU 计时 P95 `28.83ms`；这两个值不是旧版 FPS 对比。非 headless OpenGL Compatibility（NVIDIA GeForce RTX 3060 Laptop GPU）用 `tools/test_frame_performance.gd` 实测60个空闲帧 P50/P95 `16.61/17.46ms`，实际滚轮缩放与拖动路径60帧 P50/P95 `16.66/17.23ms`。地图现在只在加载、选择/行动或模式切换时更新 SubViewport 纹理，镜头变换只缩放/平移纹理；710 地区数据本身没有删减或降采样。
 
 上手与政变：右侧面板默认选中南方地区，提供三步引导、下一步建议、行动成本/效果和禁用原因；新增10支全国部队（政府5、政变3、中立2）。政变测试覆盖全国冻结、反政变方权限、政变方玩家越权拒绝、中立禁止、AI调集、反政变胜利解锁和政变方胜利失败。
+
+公开仓库：远端为 `git@github.com:myfines/fluffy-waddle.git`，当前 `master` 已推送到 commit `c2bdf67`。由于本机 SSH 公钥认证失败，本次使用同一 GitHub 地址的一次性 HTTPS push 完成上传，origin 配置仍保持用户提供的 SSH 地址。仓库不包含未知许可的710轮廓、派生轮廓、exe、release 或 Godot缓存；干净 clone 使用许可明确的 `data/demo_regions.json` 启动。
