@@ -54,6 +54,7 @@ var player_side := "government"
 var coup_key_regions: Array = []
 var coup_key_names := ["首都", "电台", "军营"]
 var _capital_crisis
+var _capital_layer: CanvasLayer
 
 func _ready() -> void:
 	var source_path := DATA_PATH if FileAccess.file_exists(DATA_PATH) else DEMO_DATA_PATH
@@ -318,7 +319,8 @@ func _enter_capital_crisis() -> void:
 	if ended: return
 	if coup_state != "active": feedback = "请先点击模拟政变，再进入首都危机"; _refresh_ui(); return
 	if _capital_crisis == null:
-		_capital_crisis = load("res://scripts/capital_crisis.gd").new(); add_child(_capital_crisis); _capital_crisis.setup(self)
+		_capital_layer = CanvasLayer.new(); _capital_layer.name = "CapitalCrisisLayer"; _capital_layer.layer = 50; add_child(_capital_layer)
+		_capital_crisis = load("res://scripts/capital_crisis.gd").new(); _capital_layer.add_child(_capital_crisis); _capital_crisis.setup(self)
 	_capital_crisis.visible = true; paused = true; _capital_crisis.queue_redraw()
 
 func _coup_weekly() -> void:

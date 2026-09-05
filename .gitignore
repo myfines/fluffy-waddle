@@ -12,4 +12,5 @@ data/vietnam_*.json
 data/*.png
 data/*.png.import
 docs/coup-preview.png.import
+docs/capital-preview.png.import
 tools/*.uid
