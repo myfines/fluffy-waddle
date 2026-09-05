@@ -198,41 +198,40 @@ func _build_controls() -> void:
 	var speed_row := HBoxContainer.new(); box.add_child(speed_row)
 	for value in [1.0, 2.0, 4.0]:
 		var speed_button := Button.new(); speed_button.text = "%sx" % value; speed_button.pressed.connect(func(v=value): speed = v; _refresh_ui()); speed_row.add_child(speed_button)
-	box.add_child(_label("ModeTitle", "地图显示：阵营 / 民心 / 叛乱", 14, Color("f4d47d")))
-	box.add_child(_label("Legend", "图例：青色=南方　红色=北方/高叛乱　民心模式由红到绿", 11, Color("a9b9bd")))
-	var focus_south := Button.new(); focus_south.name = "FocusSouth"; focus_south.text = "聚焦南方治理区"; focus_south.pressed.connect(_focus_south); box.add_child(focus_south); _labels["FocusSouth"] = focus_south
-	var mode_row := HBoxContainer.new(); box.add_child(mode_row)
+	var tabs := TabContainer.new(); tabs.name = "MainTabs"; tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL; box.add_child(tabs); _labels["MainTabs"] = tabs
+	var gov_box := VBoxContainer.new(); gov_box.name = "Governance"; gov_box.add_theme_constant_override("separation", 7); tabs.add_child(gov_box)
+	var coup_box := VBoxContainer.new(); coup_box.name = "Coup"; coup_box.add_theme_constant_override("separation", 7); tabs.add_child(coup_box)
+	gov_box.add_child(_label("ModeTitle", "地图显示：阵营 / 民心 / 叛乱", 14, Color("f4d47d")))
+	gov_box.add_child(_label("Legend", "图例：青色=南方　红色=北方/高叛乱　民心模式由红到绿", 11, Color("a9b9bd")))
+	var focus_south := Button.new(); focus_south.name = "FocusSouth"; focus_south.text = "聚焦南方治理区"; focus_south.pressed.connect(_focus_south); gov_box.add_child(focus_south); _labels["FocusSouth"] = focus_south
+	var mode_row := HBoxContainer.new(); gov_box.add_child(mode_row)
 	for spec in [["faction", "阵营"], ["support", "民心"], ["insurgency", "叛乱"]]:
 		var mode_button := Button.new(); mode_button.name = "Mode_" + spec[0]; mode_button.text = spec[1]; mode_button.pressed.connect(func(m=spec[0]): map_mode = m; _refresh_ui(); _map_layer.queue_redraw()); mode_row.add_child(mode_button)
-	box.add_child(_label("ActionTitle", "治理行动", 14, Color("f4d47d")))
-	var action_row := HBoxContainer.new(); action_row.name = "ActionRow"; box.add_child(action_row)
+	gov_box.add_child(_label("ActionTitle", "治理行动", 14, Color("f4d47d")))
+	var action_row := HBoxContainer.new(); action_row.name = "ActionRow"; gov_box.add_child(action_row)
 	for spec in [["support", "改善民生"], ["security", "恢复治安"], ["politics", "地方协商"]]:
 		var action_button := Button.new(); action_button.name = "Action_" + spec[0]; action_button.text = spec[1]; action_button.tooltip_text = "选择地区后执行"; action_button.pressed.connect(func(k=spec[0]): _action(k)); action_row.add_child(action_button); _labels["Action_" + spec[0]] = action_button
-	box.add_child(_label("ActionCost", "行动消耗：民生 8预算/4政治 · 治安 10预算/4政治 · 谈判 6预算/8政治", 11, Color("a9b9bd")))
-	box.add_child(_label("CoupStatus", "政变战局 · 全国部队（平时可调动政府部队）", 11, Color("c9b7b0")))
-	var coup_button := Button.new(); coup_button.name = "CoupButton"; coup_button.text = "模拟政变（锁定全国部队）"; coup_button.pressed.connect(_trigger_coup); box.add_child(coup_button); _labels["CoupButton"] = coup_button
+	gov_box.add_child(_label("ActionCost", "行动消耗：民生 8预算/4政治 · 治安 10预算/4政治 · 谈判 6预算/8政治", 11, Color("a9b9bd")))
+	coup_box.add_child(_label("CoupStatus", "政变战局 · 全国部队（平时可调动政府部队）", 11, Color("c9b7b0")))
+	var coup_button := Button.new(); coup_button.name = "CoupButton"; coup_button.text = "模拟政变（锁定全国部队）"; coup_button.pressed.connect(_trigger_coup); coup_box.add_child(coup_button); _labels["CoupButton"] = coup_button
 	var unit_select := OptionButton.new(); unit_select.name = "UnitSelect"; unit_select.text = "选择一支部队"
 	for unit in units: unit_select.add_item("%s · %s" % [unit.name, _side_name(unit.side)], unit.id)
 	unit_select.item_selected.connect(func(index: int): _select_unit(unit_select.get_item_id(index)))
-	box.add_child(unit_select); _labels["UnitSelect"] = unit_select
-	var selection_panel := PanelContainer.new(); selection_panel.name = "SelectionPanel"; selection_panel.add_theme_stylebox_override("panel", _style_panel(Color("18282d"), 6)); box.add_child(selection_panel)
+	coup_box.add_child(unit_select); _labels["UnitSelect"] = unit_select
+	var selection_panel := PanelContainer.new(); selection_panel.name = "SelectionPanel"; selection_panel.add_theme_stylebox_override("panel", _style_panel(Color("18282d"), 6)); gov_box.add_child(selection_panel)
 	var selection_box := VBoxContainer.new(); selection_box.add_theme_constant_override("separation", 3); selection_panel.add_child(selection_box)
 	selection_box.add_child(_label("SelectionTitle", "选区详情", 14, Color("f4d47d")))
 	selection_box.add_child(_label("Selection", "尚未选择地区", 13, Color("edf4f3")))
 	selection_box.add_child(_label("SelectionStats", "点击地图上的地区查看治理指标", 12, Color("b9c9cc")))
-	var event_panel := PanelContainer.new(); event_panel.name = "EventPanel"; event_panel.add_theme_stylebox_override("panel", _style_panel(Color("2a2220"), 6)); box.add_child(event_panel)
+	var event_panel := PanelContainer.new(); event_panel.name = "EventPanel"; event_panel.add_theme_stylebox_override("panel", _style_panel(Color("2a2220"), 6)); gov_box.add_child(event_panel)
 	var event_box := VBoxContainer.new(); event_box.add_theme_constant_override("separation", 4); event_panel.add_child(event_box)
 	event_box.add_child(_label("Event", "事件：尚未发生（每28天检查）", 13, Color("f2c77b")))
 	var event_row := HBoxContainer.new(); event_box.add_child(event_row)
 	var accept := Button.new(); accept.name = "EventA"; accept.text = "方案一"; accept.visible = false; accept.pressed.connect(func(): _resolve_event(0)); event_row.add_child(accept); _labels["EventA"] = accept
 	var decline := Button.new(); decline.name = "EventB"; decline.text = "方案二"; decline.visible = false; decline.pressed.connect(func(): _resolve_event(1)); event_row.add_child(decline); _labels["EventB"] = decline
-	box.add_child(_label("Feedback", feedback, 12, Color("f4d47d")))
-	var reset_view := Button.new(); reset_view.name = "ResetView"; reset_view.text = "重置地图视图"; reset_view.pressed.connect(_reset_view); box.add_child(reset_view)
-	var restart := Button.new(); restart.name = "Restart"; restart.text = "重新开始模拟"; restart.visible = false; restart.pressed.connect(_restart); box.add_child(restart); _labels["Restart"] = restart
-	# Keep the selected district and any blocking event above the longer coup
-	# roster so the first review frame always explains the next decision.
-	box.move_child(selection_panel, 15)
-	box.move_child(event_panel, 16)
+	gov_box.add_child(_label("Feedback", feedback, 12, Color("f4d47d")))
+	var reset_view := Button.new(); reset_view.name = "ResetView"; reset_view.text = "重置地图视图"; reset_view.pressed.connect(_reset_view); gov_box.add_child(reset_view)
+	var restart := Button.new(); restart.name = "Restart"; restart.text = "重新开始模拟"; restart.visible = false; restart.pressed.connect(_restart); gov_box.add_child(restart); _labels["Restart"] = restart
 	_apply_button_theme(box)
 
 func _apply_button_theme(parent: Node) -> void:
@@ -260,6 +259,11 @@ func _focus_south() -> void:
 
 func _side_name(side: String) -> String:
 	return {"government": "反政变方", "coup": "政变方", "neutral": "中立"}.get(side, side)
+
+func _coup_key_display() -> String:
+	var names: Array[String] = []
+	for i in coup_key_regions.size(): names.append("%s(%s)" % [coup_key_names[i], regions[coup_key_regions[i]].name])
+	return " / ".join(names)
 
 func _select_unit(unit_id: int) -> void:
 	if ended: return
@@ -442,7 +446,7 @@ func _refresh_ui() -> void:
 	_labels["Factions"].text = "派系支持　军方 %d　地方官僚 %d　民间力量 %d" % [faction_support["军方"], faction_support["地方官僚"], faction_support["民间力量"]]
 	_labels["Status"].text = "稳定度 %d　·　%s" % [stability, "已结束" if ended else ("暂停" if paused else "推进中")]
 	_labels["Feedback"].text = "反馈：" + feedback
-	_labels["CoupStatus"].text = "政变战局 · 全国部队（平时可调动政府部队）" if coup_state == "stable" else ("政变进度　反政变方 %d%%　政变方 %d%%　·　第%d周" % [coup_progress["government"], coup_progress["coup"], coup_turns] if coup_state == "active" else "政变已平息：全国部队解冻")
+	_labels["CoupStatus"].text = "政变战局 · 控制点：" + _coup_key_display() if coup_state == "stable" else ("政变进度　反政变方 %d%%　政变方 %d%%　·　第%d周　控制点：%s" % [coup_progress["government"], coup_progress["coup"], coup_turns, _coup_key_display()] if coup_state == "active" else "政变已平息：全国部队解冻")
 	var pause_button: Button = _labels["PauseButton"]
 	pause_button.text = "已结束" if ended else ("继续模拟" if paused else "暂停模拟")
 	_labels["Selection"].text = "尚未选择地区"; _labels["SelectionStats"].text = "点击地图上的地区查看治理指标"

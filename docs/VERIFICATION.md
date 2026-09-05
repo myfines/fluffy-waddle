@@ -10,7 +10,7 @@
 
 交互集成：`..\GodotPortable_4.7.2\Godot_v4.7.2-stable_win64_console.exe --path . --script res://tools/test_interaction.gd` 使用真实场景与 `_unhandled_input` 事件路径运行，输出 `interaction-tests: PASS`，退出码 0。覆盖区域内点击、海上空白点击、侧栏点击、空格暂停/继续、1/2/4 速度、累计余数、缩放与拖动后再次命中。
 
-视觉证据：同一集成脚本使用非 headless Godot 的 OpenGL Compatibility 渲染，在 `RenderingServer.frame_post_draw` 后保存 [stage1-preview.png](stage1-preview.png)。截图展示了选中的南方地区、显式治理面板和真实的“军方要求增加预算”待决事件，两种方案的成本均可见。
+视觉证据：同一集成脚本使用非 headless Godot 的 OpenGL Compatibility 渲染，在 `RenderingServer.frame_post_draw` 后保存 [stage1-preview.png](stage1-preview.png)；截图展示了选中的南方地区、显式治理面板和真实的“军方要求增加预算”待决事件，两种方案的成本均可见。`test_coup_interaction.gd` 另保存 [coup-preview.png](coup-preview.png)，显示政变暂停状态、单位标记、双方进度和首都/电台/军营的实际地区名。
 
 来源与许可限制：`vietnam-provinces-game.json` 是工作区既有文件，本阶段仅追溯到本地文件，未能从文件元数据确认其上游来源或许可证。因此项目不宣称这些轮廓可独立再分发；只把它们作为本地原型输入，并保留来源不确定性。
 

@@ -15,7 +15,8 @@ func _init() -> void:
 
 func run() -> void:
 	var s: Node2D = load("res://scenes/main.tscn").instantiate(); root.add_child(s); await process_frame
-	check(s.regions.size() == 710, "加载全部710个设计区域")
+	var expected_regions := 710 if FileAccess.file_exists("res://data/frontier_regions.json") else 10
+	check(s.regions.size() == expected_regions, "加载当前数据模式的地区数量")
 	check(s.selected == 0 and s.units.size() == 10, "开局默认南方选区并加载10支全国部队")
 	var north := 0
 	for r in s.regions:
@@ -37,7 +38,7 @@ func run() -> void:
 	# Coup permissions are enforced in the shared move command, including AI.
 	s._trigger_coup(); check(s.coup_state == "active" and s.paused, "政变触发并冻结模拟")
 	var neutral_region: int = s.units[8].region; check(not s._move_unit_to_region(8, 0), "政变期间中立部队不可调动"); check(s.units[8].region == neutral_region, "中立部队位置保持冻结")
-	check(not s._move_unit_to_region(5, 0), "玩家不可越权调动政变方"); check(s._move_unit_to_region(0, 1), "反政变方部队可调动")
+	check(not s._move_unit_to_region(5, 0), "玩家不可越权调动政变方"); check(not s._move_unit_to_region(0, 1, "ai"), "AI不可越权调动政府部队"); check(not s._move_unit_to_region(0, 1, "unknown"), "未知执行者不可调动部队"); check(s._move_unit_to_region(0, s.coup_key_regions[0]), "反政变方部队可调动")
 	s._move_unit_to_region(0, s.coup_key_regions[0]); s.coup_progress["government"] = 99; s._weekly_settlement(); check(s.coup_state == "resolved" and not s.ended, "反政变方胜利解锁全国部队")
 	for unit in s.units: check(unit.side == "government", "反政变胜利后部队恢复政府调度")
 	# Reset before event cadence assertions.
@@ -60,6 +61,25 @@ func run() -> void:
 	s2.total_days = 140; s2.faction_support = {"军方": 100, "地方官僚": 100, "民间力量": 100}; s2._weekly_settlement(); check(s2.ended and s2.outcome.contains("成功"), "20周且稳定度达标进入成功结束")
 	var s3: Node2D = load("res://scenes/main.tscn").instantiate(); root.add_child(s3); await process_frame
 	s3._trigger_coup(); s3.coup_progress["coup"] = 99; s3._weekly_settlement(); check(s3.ended and s3.outcome.contains("政变方"), "政变方胜利进入失败结束")
+	# A scattered government loses the same weekly contest that a concentrated
+	# government wins; this proves control point placement affects the result.
+	var s4: Node2D = load("res://scenes/main.tscn").instantiate(); root.add_child(s4); await process_frame
+	s4._trigger_coup(); var scattered := 1
+	for unit in s4.units:
+		if unit.side == "government": s4._move_unit_to_region(unit.id, scattered); scattered = (scattered + 1) % s4.regions.size()
+	s4.paused = false
+	for _week in range(10):
+		if s4.ended: break
+		s4._weekly_settlement()
+	check(s4.ended and s4.outcome.contains("政变方"), "政府不集中控制点时政变方获胜")
+	var s5: Node2D = load("res://scenes/main.tscn").instantiate(); root.add_child(s5); await process_frame
+	s5._trigger_coup()
+	for i in s5.units.size():
+		if s5.units[i].side == "government": s5._move_unit_to_region(s5.units[i].id, s5.coup_key_regions[i % s5.coup_key_regions.size()])
+	for _week in range(10):
+		if s5.coup_state != "active": break
+		s5._weekly_settlement()
+	check(s5.coup_state == "resolved" and not s5.ended, "政府集中三处控制点可赢得反政变")
 	# Selection UI is dynamic and reflects the clicked region.
 	s.selected = 0; s._refresh_ui(); check(s._labels["Selection"].text.contains(str(s.regions[0].name)), "选区详情内容随选择刷新")
 	print("governance-tests: PASS" if failures == 0 else "governance-tests: FAIL count=" + str(failures)); quit(0 if failures == 0 else 1)
