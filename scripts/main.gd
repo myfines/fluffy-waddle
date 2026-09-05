@@ -53,6 +53,7 @@ var coup_progress := {"government": 0, "coup": 0}
 var player_side := "government"
 var coup_key_regions: Array = []
 var coup_key_names := ["首都", "电台", "军营"]
+var _capital_crisis
 
 func _ready() -> void:
 	var source_path := DATA_PATH if FileAccess.file_exists(DATA_PATH) else DEMO_DATA_PATH
@@ -214,6 +215,7 @@ func _build_controls() -> void:
 	gov_box.add_child(_label("ActionCost", "行动消耗：民生 8预算/4政治 · 治安 10预算/4政治 · 谈判 6预算/8政治", 11, Color("a9b9bd")))
 	coup_box.add_child(_label("CoupStatus", "政变战局 · 全国部队（平时可调动政府部队）", 11, Color("c9b7b0")))
 	var coup_button := Button.new(); coup_button.name = "CoupButton"; coup_button.text = "模拟政变（锁定全国部队）"; coup_button.pressed.connect(_trigger_coup); coup_box.add_child(coup_button); _labels["CoupButton"] = coup_button
+	var capital_button := Button.new(); capital_button.name = "CapitalCrisis"; capital_button.text = "进入首都危机（城市回合）"; capital_button.pressed.connect(_enter_capital_crisis); coup_box.add_child(capital_button); _labels["CapitalCrisis"] = capital_button
 	var unit_select := OptionButton.new(); unit_select.name = "UnitSelect"; unit_select.text = "选择一支部队"
 	for unit in units: unit_select.add_item("%s · %s" % [unit.name, _side_name(unit.side)], unit.id)
 	unit_select.item_selected.connect(func(index: int): _select_unit(unit_select.get_item_id(index)))
@@ -281,6 +283,10 @@ func _select_unit(unit_id: int) -> void:
 
 func _move_unit_to_region(unit_id: int, destination: int, actor := "player") -> bool:
 	if ended or destination < 0 or destination >= regions.size(): return false
+	if _capital_crisis != null and _capital_crisis.visible:
+		for city_unit in _capital_crisis.city_positions:
+			if int(city_unit) == unit_id:
+				feedback = "首都危机进行中：首都部队只能使用城市行动命令"; _refresh_ui(); return false
 	var unit_index := -1
 	for i in units.size():
 		if units[i].id == unit_id: unit_index = i; break
@@ -307,6 +313,13 @@ func _trigger_coup() -> void:
 	if ended or coup_state == "active": return
 	if active_event != "": feedback = "请先处理当前事件"; _refresh_ui(); return
 	coup_state = "active"; coup_turns = 0; coup_progress = {"government": 0, "coup": 0}; paused = true; selected_unit = -1; feedback = "政变开始：全国部队冻结；只能调动反政变方，政变方由AI行动，中立部队不可动"; _refresh_ui(); _map_layer.queue_redraw(); queue_redraw()
+
+func _enter_capital_crisis() -> void:
+	if ended: return
+	if coup_state != "active": feedback = "请先点击模拟政变，再进入首都危机"; _refresh_ui(); return
+	if _capital_crisis == null:
+		_capital_crisis = load("res://scripts/capital_crisis.gd").new(); add_child(_capital_crisis); _capital_crisis.setup(self)
+	_capital_crisis.visible = true; paused = true; _capital_crisis.queue_redraw()
 
 func _coup_weekly() -> void:
 	if coup_state != "active" or ended: return
@@ -475,6 +488,7 @@ func _refresh_ui() -> void:
 		elif kind == "politics" and talk_cooldown > 0: action_button.tooltip_text = "地方协商冷却中，还需 %d 周" % talk_cooldown
 		else: action_button.tooltip_text = "执行%s：预算 -%d、政治资本 -%d" % [ACTION_COSTS[kind].label, ACTION_COSTS[kind].budget, ACTION_COSTS[kind].politics]
 	var coup_button: Button = _labels["CoupButton"]; coup_button.disabled = ended or coup_state == "active" or coup_state == "resolved"; coup_button.tooltip_text = "演示政变：全国部队先冻结，反政变方可调动" if coup_state == "stable" else "政变战局已启动或结束"
+	var capital_button: Button = _labels["CapitalCrisis"]; capital_button.disabled = ended or coup_state != "active"; capital_button.tooltip_text = "先模拟政变，再进入西贡首都回合" if coup_state != "active" else "进入城市回合，国家时间暂停"
 	var unit_select: OptionButton = _labels["UnitSelect"]; unit_select.disabled = ended
 	for i in units.size(): unit_select.set_item_text(i, "%s · %s" % [units[i].name, _side_name(units[i].side)])
 	for i in 3:

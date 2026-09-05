@@ -10,7 +10,7 @@
 
 南北分类采用游戏简化规则：地区中心纬度 `>= 17°N` 视为北方外压，其余视为南方可治理。这是为了保证原型中的治理边界稳定，不能当作历史行政边界或历史精确复原。
 
-数据与模拟分离：`data/design_regions.json` 是区域数据，`scripts/main.gd` 负责绘制、交互和日期推进。未加入战斗、完整经济、外交或事件系统。
+数据与模拟分离：`data/design_regions.json` 是区域数据，`scripts/main.gd` 负责全国绘制、交互和日期推进，`scripts/capital_crisis.gd` 负责首都危机回合。首都危机是原创桌游式抽象街区，不是历史战术地图；暂不模拟完整经济、外交或真实战斗细节。
 
 开源仓库提供 `data/demo_regions.json` 作为许可明确的10区演示输入，干净 clone 后可以直接运行。当前工作区若存在本地 `data/frontier_regions.json`，程序会优先加载完整710区版本；该轮廓及 `data/vietnam_*.json` 的上游许可尚未确认，因此不会随公开仓库发布。需要完整地图时，请把自有或已获授权的同 schema 数据导入为 `data/frontier_regions.json`，并确认 `regionCount` 为710。
 
