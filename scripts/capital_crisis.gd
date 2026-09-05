@@ -102,8 +102,11 @@ func _city_action(action: String, actor := "player") -> bool:
 		city_positions[unit_id] = selected_node; report = "%s移动到%s" % [unit.name, CITY_NODES[selected_node].name]
 	elif action == "control":
 		if selected_node < 0 or city_positions[unit_id] != selected_node: report = "控制地点需要部队先抵达该城区"; queue_redraw(); return false
+		if node_owner[selected_node] == unit.side: report = "该地点已由本方控制，重复控制不会消耗AP"; queue_redraw(); return false
 		if node_owner[selected_node] != unit.side:
-			var attacker := _power_at_node(selected_node, unit.side); var defender := _power_at_node(selected_node, node_owner[selected_node])
+			var defender_side: String = node_owner[selected_node]
+			if defender_side == "neutral": defender_side = "coup" if unit.side == "government" else "government"
+			var attacker := _power_at_node(selected_node, unit.side); var defender := _power_at_node(selected_node, defender_side) + int(node_order[selected_node] / 5)
 			if defender > 0 and attacker < defender: report = "控制失败：守军兵力 %d 高于进攻兵力 %d" % [defender, attacker]; queue_redraw(); return false
 		node_owner[selected_node] = unit.side; report = "%s控制了%s（%s）" % [unit.name, CITY_NODES[selected_node].name, CITY_NODES[selected_node].kind]
 		_apply_node_benefit(selected_node, unit.side)
@@ -196,4 +199,9 @@ func _draw() -> void:
 	for owner in node_owner.values():
 		if owner == "government": gov_count += 1
 		elif owner == "coup": coup_count += 1
-	draw_string(ThemeDB.fallback_font, Vector2(930, 155), "桌游规则：每方3 AP · 玩家先手", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d7c47a")); draw_string(ThemeDB.fallback_font, Vector2(930, 185), "第%d回合　当前：%s　AP：%d" % [round, "反政变方" if current_side == "government" else "政变方AI", ap], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE); draw_string(ThemeDB.fallback_font, Vector2(930, 215), "控制点　反政变方 %d　政变方 %d（先达5点获胜）" % [gov_count, coup_count], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b9c9cc")); draw_string(ThemeDB.fallback_font, Vector2(930, 610), "战报：" + report, HORIZONTAL_ALIGNMENT_LEFT, 300, 13, Color("f2c77b")); draw_string(ThemeDB.fallback_font, Vector2(930, 700), "绿色=反政变方　红色=政变方　灰色=中立\n点击街区查看合法目标", HORIZONTAL_ALIGNMENT_LEFT, 300, 12, Color("a9b9bd"))
+	draw_string(ThemeDB.fallback_font, Vector2(930, 155), "桌游规则：每方3 AP · 玩家先手", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d7c47a")); draw_string(ThemeDB.fallback_font, Vector2(930, 185), "第%d回合　当前：%s　AP：%d" % [round, "反政变方" if current_side == "government" else "政变方AI", ap], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE); draw_string(ThemeDB.fallback_font, Vector2(930, 215), "控制点 G/C：%d/%d　权威 G/C：%d/6 · %d/6" % [gov_count, coup_count, authority["government"], authority["coup"]], HORIZONTAL_ALIGNMENT_LEFT, 320, 12, Color("b9c9cc"))
+	if selected_node >= 0: draw_string(ThemeDB.fallback_font, Vector2(930, 575), "选中：%s　归属：%s　兵力 G/C：%d/%d　秩序：%d\n效果：%s" % [CITY_NODES[selected_node].name, "反政变方" if node_owner[selected_node] == "government" else "政变方" if node_owner[selected_node] == "coup" else "中立", _power_at_node(selected_node, "government"), _power_at_node(selected_node, "coup"), node_order[selected_node], _node_effect(CITY_NODES[selected_node].id)], HORIZONTAL_ALIGNMENT_LEFT, 310, 11, Color("e6d18a"))
+	draw_string(ThemeDB.fallback_font, Vector2(930, 640), "战报：" + report, HORIZONTAL_ALIGNMENT_LEFT, 300, 13, Color("f2c77b")); draw_string(ThemeDB.fallback_font, Vector2(930, 715), "绿色=反政变方　红色=政变方　灰色=中立\n点击街区查看合法目标", HORIZONTAL_ALIGNMENT_LEFT, 300, 12, Color("a9b9bd"))
+
+func _node_effect(node_id: String) -> String:
+	return {"police": "控制后秩序50，整顿额外+4", "barracks": "控制后权威+2", "radio": "控制后权威+3", "cityhall": "控制后权威+1", "residential": "控制后权威+1"}.get(node_id, "连接与占领收益")

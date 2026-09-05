@@ -4,7 +4,7 @@
 
 运行检查：`..\GodotPortable_4.7.2\Godot_v4.7.2-stable_win64_console.exe --headless --path . --quit-after 2` 完成且无 `ERROR` 或 `SCRIPT ERROR`。治理测试：`--headless --path . --script res://tools/test_governance.gd` 输出 `governance-tests: PASS`；覆盖710地区、17°N分类、统一行动成本、快捷键与按钮、谈判冷却、三类事件双分支、资源不足保留待决、28天自动事件、跨周推进、军方底线倒台、20周成功、结束锁定和重新开始、选区 UI 更新。日期测试：`--headless --path . --script res://tools/test_simulation.gd` 输出 `simulation-tests: PASS`。
 
-治理迭代：完整加载 710 个地区；右侧 Control 面板显式显示预算、政治资本、三派支持、稳定度、选区详情、行动成本、反馈和事件选项。地图使用实际 `Control.clip_contents` 裁剪视口，填色模式由阵营、民心、叛乱驱动，源环采用安全的渲染填充路径避免三角化错误。稳定度由三派支持与南方地区民心/治安/叛乱指标共同计算。政变页可进入独立的“首都危机”城市回合，城市使用9个原创抽象街区、道路/河道和三处控制点，不宣称历史战术精确；城市页采用每方3 AP、邻接移动、地点控制/整顿/争取中立和 AI 回合。
+治理迭代：完整加载 710 个地区；右侧 Control 面板显式显示预算、政治资本、三派支持、稳定度、选区详情、行动成本、反馈和事件选项。地图使用实际 `Control.clip_contents` 裁剪视口，填色模式由阵营、民心、叛乱驱动，源环采用安全的渲染填充路径避免三角化错误。稳定度由三派支持与南方地区民心/治安/叛乱指标共同计算。政变页可进入独立的“首都危机”城市回合，城市使用9个原创抽象街区、道路/河道和三处控制点，不宣称历史战术精确；城市页采用每方3 AP、邻接移动、地点控制/整顿/争取中立和 AI 回合。城市实例活动期间，全国时间、周结算和全国军令全部锁定，返回查看不会解锁。
 
 交互实现：左键仅在 `MAP_RECT` 内处理，并使用 `Geometry2D.is_point_in_polygon` 命中实际轮廓环；地图外/侧栏不会改变选择。滚轮缩放和中键拖动共享同一坐标变换，因此命中逻辑随缩放拖动保持一致。暂停或事件待决时 `_process` 不推进；运行时按天循环，严格在第7天周结算和第28天触发事件，结束后快捷键与按钮保持无效并提供重新开始。
 
@@ -14,11 +14,11 @@
 
 来源与许可限制：`vietnam-provinces-game.json` 是工作区既有文件，本阶段仅追溯到本地文件，未能从文件元数据确认其上游来源或许可证。因此项目不宣称这些轮廓可独立再分发；只把它们作为本地原型输入，并保留来源不确定性。
 
-导出：`powershell -ExecutionPolicy Bypass -File tools\build_windows.ps1` 生成 `builds\VietnamWar1965-governance.exe`（最新 115,000,320 bytes）；本地 builds 另保留用户原有的8月 `VietnamWar1965.exe` 和 `VietnamWar1965.console.exe`。
+导出：`powershell -ExecutionPolicy Bypass -File tools\build_windows.ps1` 生成 `builds\VietnamWar1965-governance.exe`（首都危机版最新导出）；本地 builds 另保留用户原有的8月 `VietnamWar1965.exe` 和 `VietnamWar1965.console.exe`。
 
 性能验证：`--headless --path . --script res://tools/test_performance.gd` 在完整 710 地区上实测 `geometry_rebuild_ms=278.72`（主动重建成本）、缓存绘制命令 CPU 计时 P95 `28.00ms`，变换场景 CPU 计时 P95 `28.83ms`；这两个值不是旧版 FPS 对比。非 headless OpenGL Compatibility（NVIDIA GeForce RTX 3060 Laptop GPU）用 `tools/test_frame_performance.gd` 实测60个空闲帧 P50/P95 `16.67/17.53ms`，实际滚轮缩放与拖动路径60帧 P50/P95 `16.61/17.36ms`。地图现在只在加载、选择/行动或模式切换时更新 SubViewport 纹理，镜头变换只缩放/平移纹理；710 地区数据本身没有删减或降采样。
 
-上手与政变：右侧面板默认选中南方地区，分为“治理/政变”两页签；治理页提供三步引导、下一步建议、行动成本/效果和禁用原因，政变页提供10支部队选择器、首都/电台/军营三个目的地按钮、移动提示和页内反馈。新增10支全国部队（政府5、政变3、中立2）。政变测试覆盖全国冻结、反政变方权限、政变方玩家越权拒绝、中立禁止、AI调集、三处控制点不同结果、反政变胜利解锁和政变方胜利失败。首都危机测试覆盖城市邻接、3 AP 行动、非法目标、AI回合、切屏状态、全国调动绕过拒绝、城市结局写回全国和真实城市胜负路径。
+上手与政变：右侧面板默认选中南方地区，分为“治理/政变”两页签；治理页提供三步引导、下一步建议、行动成本/效果和禁用原因，政变页提供10支部队选择器、首都/电台/军营三个目的地按钮、移动提示和页内反馈。新增10支全国部队（政府5、政变3、中立2）。政变测试覆盖全国冻结、反政变方权限、政变方玩家越权拒绝、中立禁止、AI调集、三处控制点不同结果、反政变胜利解锁和政变方胜利失败。首都危机命令 `--headless --path . --script res://tools/test_capital_crisis.gd` 输出 `capital-crisis-tests: PASS`，覆盖城市邻接、3 AP 行动、非法目标、未知 action/actor/current_side、同点重复控制、敌驻军兵力+秩序防御、AI真实移动、切屏锁定、重启释放实例、全国调动绕过拒绝、城市结局写回全国，以及玩家合法控制路径和不调兵时 AI 胜利路径。
 
 公开仓库：远端为 `git@github.com:myfines/fluffy-waddle.git`，当前 `master` 已推送并以远端 HEAD 为准。由于本机 SSH 公钥认证失败，本次使用同一 GitHub 地址的一次性 HTTPS push 完成上传，origin 配置仍保持用户提供的 SSH 地址。仓库不包含未知许可的710轮廓、派生轮廓、exe、release 或 Godot缓存；干净 clone 使用许可明确的 `data/demo_regions.json` 启动，且干净 clone 治理测试通过。
 

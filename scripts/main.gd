@@ -153,6 +153,9 @@ func _sync_map_transform() -> void:
 	_map_texture.scale = Vector2.ONE * zoom
 	_map_texture.position = center + offset - center * zoom
 
+func _city_is_active() -> bool:
+	return _capital_crisis != null and _capital_crisis.city_outcome == ""
+
 func _unproject(pos: Vector2) -> Vector2:
 	var scale := minf(MAP_RECT.size.x / (LON_MAX - LON_MIN), MAP_RECT.size.y / (LAT_MAX - LAT_MIN))
 	var map_size := Vector2((LON_MAX - LON_MIN) * scale, (LAT_MAX - LAT_MIN) * scale) * zoom
@@ -254,6 +257,7 @@ func _apply_button_theme(parent: Node) -> void:
 
 func _toggle_pause() -> void:
 	if ended: return
+	if _city_is_active(): paused = true; feedback = "首都危机进行中：请返回城市完成回合"; _refresh_ui(); queue_redraw(); return
 	if active_event != "":
 		paused = true; feedback = "请先处理待决事件，再继续模拟"; _refresh_ui(); queue_redraw(); return
 	paused = not paused; feedback = "模拟已暂停" if paused else "模拟继续推进"; _refresh_ui(); queue_redraw()
@@ -284,7 +288,7 @@ func _select_unit(unit_id: int) -> void:
 
 func _move_unit_to_region(unit_id: int, destination: int, actor := "player") -> bool:
 	if ended or destination < 0 or destination >= regions.size(): return false
-	if _capital_crisis != null and _capital_crisis.visible:
+	if _city_is_active():
 		for city_unit in _capital_crisis.city_positions:
 			if int(city_unit) == unit_id:
 				feedback = "首都危机进行中：首都部队只能使用城市行动命令"; _refresh_ui(); return false
@@ -324,7 +328,7 @@ func _enter_capital_crisis() -> void:
 	_capital_crisis.visible = true; paused = true; _capital_crisis.queue_redraw()
 
 func _coup_weekly() -> void:
-	if coup_state != "active" or ended: return
+	if coup_state != "active" or ended or _city_is_active(): return
 	coup_turns += 1
 	# Three southern control points make troop movement matter: capital, radio,
 	# and barracks. The coup AI captures the weakest point through the same move
@@ -396,12 +400,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		_refresh_ui(); queue_redraw()
 
 func _process(delta: float) -> void:
-	if paused or ended: return
+	if paused or ended or _city_is_active(): return
 	elapsed += delta * speed; var days := int(elapsed / 0.5)
 	if days <= 0: return
 	elapsed -= float(days) * 0.5; _advance_simulation_days(days); _refresh_ui(); queue_redraw()
 
 func _advance_simulation_days(days: int) -> void:
+	if _city_is_active(): return
 	for _i in range(days):
 		if paused or ended: return
 		total_days += 1; simulation.advance_days(1)
@@ -429,7 +434,7 @@ func _action(kind: String) -> void:
 	_refresh_ui(); _map_layer.queue_redraw(); queue_redraw()
 
 func _weekly_settlement() -> void:
-	if ended: return
+	if ended or _city_is_active(): return
 	budget = mini(150, budget + 12); political_capital = mini(100, political_capital + 3); talk_cooldown = maxi(0, talk_cooldown - 1)
 	for r in regions:
 		if r.faction == "south": r.insurgency = clampi(int(r.insurgency) + (1 if int(r.security) < 40 else -1), 0, 100)
@@ -462,6 +467,10 @@ func _end_game(result: String) -> void:
 	ended = true; outcome = result; paused = true; active_event = ""; active_event_data = {}; feedback = result
 
 func _restart() -> void:
+	if _capital_crisis != null:
+		_capital_crisis.queue_free(); _capital_crisis = null
+	if _capital_layer != null:
+		_capital_layer.queue_free(); _capital_layer = null
 	regions = _initial_regions.duplicate(true); selected = 0; paused = true; speed = 1.0; elapsed = 0.0; simulation = Simulation.new(); budget = 100; political_capital = 60; faction_support = {"军方": 58, "地方官僚": 52, "民间力量": 46}; stability = 62; talk_cooldown = 0; total_days = 0; event_index = 0; active_event = ""; active_event_data = {}; ended = false; outcome = ""; coup_state = "stable"; coup_turns = 0; coup_progress = {"government": 0, "coup": 0}; selected_unit = -1; _find_coup_key_regions(); _init_units(); feedback = "已重新开始：建议先改善民生，再恢复治安"; _refresh_ui(); _map_layer.queue_redraw(); queue_redraw()
 
 func _refresh_ui() -> void:

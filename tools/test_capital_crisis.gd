@@ -12,15 +12,18 @@ func run() -> void:
 	var city = national._capital_crisis
 	check(city.visible and city.CITY_NODES.size() == 9, "首都危机覆盖层打开并加载9个原创城区")
 	check(city.ROADS.size() >= 10 and city._node_neighbors(0).has(1), "道路邻接可查询")
-	var gov_region: int = national.units[0].region; check(not national._move_unit_to_region(0, 1), "城市回合拒绝全国绕过调动"); check(national.units[0].region == gov_region, "全国单位状态不被城市绕过改变")
+	var gov_region: int = national.units[0].region; var coup_initial: int = city.city_positions[5]; check(not national._move_unit_to_region(0, 1), "城市回合拒绝全国绕过调动"); check(national.units[0].region == gov_region, "全国单位状态不被城市绕过改变")
+	city.current_side = "coup"; city.selected_node = 4; check(city._city_action("move", "ai"), "AI将政变部队调入中立市政厅")
+	city.current_side = "government"; city._select_unit(2); city.selected_node = 4; var defended_ap: int = city.ap; check(not city._city_action("control") and city.ap == defended_ap and city.node_owner[4] == "neutral", "敌军驻守中立点时兵力防御生效")
 	city._select_unit(0); city.selected_node = 1; var before_ap: int = city.ap; check(city._city_action("move"), "相邻城区移动成功"); check(city.ap == before_ap - 1, "移动消耗1AP")
 	var illegal_ap: int = city.ap; city.selected_node = 8; check(not city._city_action("move") and city.ap == illegal_ap, "非相邻目标拒绝且不扣AP")
-	city.selected_node = 1; check(city._city_action("control"), "控制警察局成功"); check(city.node_owner[1] == "government" and city.node_order[1] > 0, "警察局控制产生秩序收益")
+	city.selected_node = 1; check(city._city_action("control"), "控制警察局成功"); check(city.node_owner[1] == "government" and city.node_order[1] > 0, "警察局控制产生秩序收益"); var authority_before: int = city.authority["government"]; var repeat_ap: int = city.ap; check(not city._city_action("control") and city.ap == repeat_ap and city.authority["government"] == authority_before, "重复控制不会刷收益或扣AP")
+	if city.ap == 0: city._end_turn()
 	while city.ap > 0: city.selected_node = 1; city._city_action("rally")
 	check(city.ap == 0 and not city._city_action("rally") and city.node_order[1] > 50, "整顿行动有确定性秩序收益且AP不负")
 	var unknown_ap: int = city.ap; check(not city._city_action("unknown") and city.ap == unknown_ap, "未知城市行动拒绝")
-	var coup_before: int = city.city_positions[5]; var round_before: int = city.round; city._end_turn(); check(city.round == round_before + 1 and city.ap == 3 and city.current_side == "government", "结束回合触发AI并刷新AP"); check(city.city_positions[5] != coup_before, "政变AI通过统一城市移动命令改变位置")
-	var saved_round: int = city.round; city._close(); check(not city.visible and national.paused, "返回全国且国家时间暂停")
+	var round_before: int = city.round; city._end_turn(); check(city.round == round_before + 1 and city.ap == 3 and city.current_side == "government", "结束回合触发AI并刷新AP"); check(city.city_positions[5] != coup_initial, "政变AI通过统一城市移动命令改变位置")
+	var saved_round: int = city.round; var saved_total: int = national.total_days; var saved_national_region: int = national.units[0].region; city._close(); check(not city.visible and national.paused, "返回全国且国家时间暂停"); national._toggle_pause(); national._advance_simulation_days(7); national._weekly_settlement(); check(national.total_days == saved_total and national.units[0].region == saved_national_region and national.paused, "城市实例存在时切屏不解锁全国时间/军令")
 	national._enter_capital_crisis(); await process_frame; check(city.visible and city.round == saved_round and city.ap == 3, "重新进入保持城市状态")
 	# Complete a real government win in a fresh crisis with legal commands, no
 	# forced AP or owner values: units 3 and 2 guard two neutral points.
