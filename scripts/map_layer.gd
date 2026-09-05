@@ -19,16 +19,16 @@ func build_geometry_cache() -> void:
 			if poly.size() > 1 and poly[0].distance_squared_to(poly[poly.size() - 1]) <= 0.0001: poly.remove_at(poly.size() - 1)
 			if poly.size() >= 3:
 				var indices := Geometry2D.triangulate_polygon(poly)
-				var segments: Array = []
-				if indices.size() >= 3 and indices.size() % 3 == 0: segments = _scanline_segments(poly)
-				_cache.append({"region": region_index, "ring": ring_index, "poly": poly, "indices": indices, "segments": segments})
+				var fill_points := PackedVector2Array()
+				if indices.size() >= 3 and indices.size() % 3 == 0: fill_points = _scanline_segments(poly)
+				_cache.append({"region": region_index, "ring": ring_index, "poly": poly, "indices": indices, "fill_points": fill_points})
 			ring_index += 1
 	geometry_build_ms = float(Time.get_ticks_usec() - started) / 1000.0
 
-func _scanline_segments(poly: PackedVector2Array) -> Array:
+func _scanline_segments(poly: PackedVector2Array) -> PackedVector2Array:
 	var min_y := poly[0].y; var max_y := poly[0].y
 	for p in poly: min_y = minf(min_y, p.y); max_y = maxf(max_y, p.y)
-	var segments: Array = []; var y := floori(min_y)
+	var segments := PackedVector2Array(); var y := floori(min_y)
 	while y <= ceili(max_y):
 		var xs: Array[float] = []
 		for i in range(poly.size()):
@@ -36,7 +36,7 @@ func _scanline_segments(poly: PackedVector2Array) -> Array:
 			if (a.y <= y and b.y > y) or (b.y <= y and a.y > y): xs.append(a.x + (float(y) - a.y) * (b.x - a.x) / (b.y - a.y))
 		xs.sort()
 		for i in range(0, xs.size() - 1, 2):
-			if i + 1 < xs.size(): segments.append([Vector2(xs[i], y), Vector2(xs[i + 1], y)])
+			if i + 1 < xs.size(): segments.append(Vector2(xs[i], y)); segments.append(Vector2(xs[i + 1], y))
 		y += 2
 	return segments
 
@@ -45,7 +45,7 @@ func _draw() -> void:
 	for item in _cache:
 		var region: Dictionary = host.regions[item.region]
 		var fill := _region_color(region)
-		for segment in item.segments: draw_line(segment[0], segment[1], Color(fill, 0.58), 2.0, false)
+		if item.fill_points.size() >= 2: draw_multiline(item.fill_points, Color(fill, 0.58), 2.0, false)
 		var outline: PackedVector2Array = item.poly.duplicate(); outline.append(outline[0])
 		var line_color := Color("f6d365") if host.selected >= 0 and host.regions[host.selected].id == region.id else Color("687b7c")
 		draw_polyline(outline, line_color, 0.75, true)

@@ -38,7 +38,7 @@ func run() -> void:
 	s._trigger_coup(); check(s.coup_state == "active" and s.paused, "政变触发并冻结模拟")
 	var neutral_region: int = s.units[8].region; check(not s._move_unit_to_region(8, 0), "政变期间中立部队不可调动"); check(s.units[8].region == neutral_region, "中立部队位置保持冻结")
 	check(not s._move_unit_to_region(5, 0), "玩家不可越权调动政变方"); check(s._move_unit_to_region(0, 1), "反政变方部队可调动")
-	s.coup_progress["government"] = 99; s._weekly_settlement(); check(s.coup_state == "resolved" and not s.ended, "反政变方胜利解锁全国部队")
+	s._move_unit_to_region(0, s.coup_key_regions[0]); s.coup_progress["government"] = 99; s._weekly_settlement(); check(s.coup_state == "resolved" and not s.ended, "反政变方胜利解锁全国部队")
 	for unit in s.units: check(unit.side == "government", "反政变胜利后部队恢复政府调度")
 	# Reset before event cadence assertions.
 	s._restart()

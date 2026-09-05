@@ -16,6 +16,6 @@
 
 导出：`powershell -ExecutionPolicy Bypass -File tools\build_windows.ps1` 生成 `builds\VietnamWar1965-governance.exe`；原有 `builds\VietnamWar1965-stage1.exe` 保留。
 
-性能验证：`--headless --path . --script res://tools/test_performance.gd` 在完整 710 地区上实测 `geometry_rebuild_ms=274.69`（加载/主动重建基线）、缓存静态重绘 `cached_draw_p95_ms=27.61`，缩放/平移变换场景 `transform_draw_p95_ms=28.28`。缓存把环线清理、投影、三角化预检和扫描填充段放到加载期；每日推进和普通输入不再重复这些工作，710 地区数据本身没有删减或降采样。
+性能验证：`--headless --path . --script res://tools/test_performance.gd` 在完整 710 地区上实测 `geometry_rebuild_ms=274.25`（主动重建成本）、缓存绘制命令 CPU 计时 P95 `26.50ms`，变换场景 CPU 计时 P95 `26.76ms`；这两个值不是旧版 FPS 对比。非 headless OpenGL Compatibility（NVIDIA GeForce RTX 3060 Laptop GPU）用 `tools/test_frame_performance.gd` 实测60个空闲帧 P50/P95 `16.61/17.51ms`，实际滚轮缩放与拖动路径60帧 P50/P95 `16.63/17.41ms`。地图现在只在加载、选择/行动或模式切换时更新 SubViewport 纹理，镜头变换只缩放/平移纹理；710 地区数据本身没有删减或降采样。
 
 上手与政变：右侧面板默认选中南方地区，提供三步引导、下一步建议、行动成本/效果和禁用原因；新增10支全国部队（政府5、政变3、中立2）。政变测试覆盖全国冻结、反政变方权限、政变方玩家越权拒绝、中立禁止、AI调集、反政变胜利解锁和政变方胜利失败。

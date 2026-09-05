@@ -43,6 +43,7 @@ var outcome := ""
 var map_mode := "faction"
 var _initial_regions: Array = []
 var _map_layer
+var _map_texture: TextureRect
 var _labels: Dictionary = {}
 var units: Array = []
 var selected_unit := -1
@@ -50,6 +51,8 @@ var coup_state := "stable"
 var coup_turns := 0
 var coup_progress := {"government": 0, "coup": 0}
 var player_side := "government"
+var coup_key_regions: Array = []
+var coup_key_names := ["首都", "电台", "军营"]
 
 func _ready() -> void:
 	var source_path := DATA_PATH if FileAccess.file_exists(DATA_PATH) else DEMO_DATA_PATH
@@ -61,6 +64,7 @@ func _ready() -> void:
 	for r in regions:
 		r.faction = "north" if float(r.lat) >= 17.0 else "south"
 	_initial_regions = regions.duplicate(true)
+	_find_coup_key_regions()
 	_init_units()
 	selected = 0
 	_build_controls()
@@ -78,28 +82,53 @@ func _build_map_layer() -> void:
 	clip.clip_contents = true
 	clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(clip)
+	var viewport := SubViewport.new()
+	viewport.name = "StaticMapViewport"
+	viewport.size = MAP_RECT.size
+	viewport.transparent_bg = true
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	clip.add_child(viewport)
 	_map_layer = load("res://scripts/map_layer.gd").new()
 	_map_layer.name = "MapLayer"
 	_map_layer.host = self
-	clip.add_child(_map_layer)
+	viewport.add_child(_map_layer)
+	_map_texture = TextureRect.new()
+	_map_texture.name = "MapTexture"
+	_map_texture.texture = viewport.get_texture()
+	_map_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_map_texture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_map_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_texture.size = MAP_RECT.size
+	clip.add_child(_map_texture)
 
 func _init_units() -> void:
-	var north_region := 0
+	var south_pool: Array = []
 	for i in regions.size():
-		if regions[i].faction == "north": north_region = i; break
+		if regions[i].faction == "south": south_pool.append(i)
+	if south_pool.is_empty(): south_pool.append(0)
 	units = [
 		{"id": 0, "name": "首都卫队", "side": "government", "region": 0, "strength": 24},
 		{"id": 1, "name": "湄公河旅", "side": "government", "region": 45, "strength": 18},
 		{"id": 2, "name": "西贡机动队", "side": "government", "region": 120, "strength": 20},
 		{"id": 3, "name": "中央高地旅", "side": "government", "region": 180, "strength": 16},
 		{"id": 4, "name": "海岸警备队", "side": "government", "region": 250, "strength": 12},
-		{"id": 5, "name": "装甲团一部", "side": "coup", "region": north_region, "strength": 22},
-		{"id": 6, "name": "空降营", "side": "coup", "region": north_region + 1, "strength": 16},
-		{"id": 7, "name": "宪兵队", "side": "coup", "region": north_region + 2, "strength": 14},
-		{"id": 8, "name": "地方预备队", "side": "neutral", "region": 320, "strength": 15},
-		{"id": 9, "name": "边境守备队", "side": "neutral", "region": 400, "strength": 12},
+		{"id": 5, "name": "装甲团一部", "side": "coup", "region": south_pool[2 % south_pool.size()], "strength": 22},
+		{"id": 6, "name": "空降营", "side": "coup", "region": south_pool[3 % south_pool.size()], "strength": 16},
+		{"id": 7, "name": "宪兵队", "side": "coup", "region": south_pool[4 % south_pool.size()], "strength": 14},
+		{"id": 8, "name": "地方预备队", "side": "neutral", "region": south_pool[5 % south_pool.size()], "strength": 15},
+		{"id": 9, "name": "边境守备队", "side": "neutral", "region": south_pool[6 % south_pool.size()], "strength": 12},
 	]
 	for unit in units: unit.region = int(unit.region) % maxi(1, regions.size())
+
+func _find_coup_key_regions() -> void:
+	coup_key_regions.clear()
+	for target in [Vector2(106.7, 10.8), Vector2(105.8, 10.5), Vector2(107.3, 10.5)]:
+		var best := 0; var best_distance := INF
+		for i in regions.size():
+			if regions[i].faction != "south": continue
+			var distance := Vector2(float(regions[i].lon), float(regions[i].lat)).distance_squared_to(target)
+			if distance < best_distance and not coup_key_regions.has(i): best = i; best_distance = distance
+		coup_key_regions.append(best)
 
 func _point(lon: float, lat: float) -> Vector2:
 	var scale := minf(MAP_RECT.size.x / (LON_MAX - LON_MIN), MAP_RECT.size.y / (LAT_MAX - LAT_MIN))
@@ -117,10 +146,10 @@ func _point_local_base(lon: float, lat: float) -> Vector2:
 	return origin + Vector2((lon - LON_MIN) * scale, (LAT_MAX - lat) * scale) - MAP_RECT.position
 
 func _sync_map_transform() -> void:
-	if _map_layer == null: return
+	if _map_texture == null: return
 	var center := MAP_RECT.size * 0.5
-	_map_layer.scale = Vector2.ONE * zoom
-	_map_layer.position = center + offset - center * zoom
+	_map_texture.scale = Vector2.ONE * zoom
+	_map_texture.position = center + offset - center * zoom
 
 func _unproject(pos: Vector2) -> Vector2:
 	var scale := minf(MAP_RECT.size.x / (LON_MAX - LON_MIN), MAP_RECT.size.y / (LAT_MAX - LAT_MIN))
@@ -200,6 +229,10 @@ func _build_controls() -> void:
 	box.add_child(_label("Feedback", feedback, 12, Color("f4d47d")))
 	var reset_view := Button.new(); reset_view.name = "ResetView"; reset_view.text = "重置地图视图"; reset_view.pressed.connect(_reset_view); box.add_child(reset_view)
 	var restart := Button.new(); restart.name = "Restart"; restart.text = "重新开始模拟"; restart.visible = false; restart.pressed.connect(_restart); box.add_child(restart); _labels["Restart"] = restart
+	# Keep the selected district and any blocking event above the longer coup
+	# roster so the first review frame always explains the next decision.
+	box.move_child(selection_panel, 15)
+	box.move_child(event_panel, 16)
 	_apply_button_theme(box)
 
 func _apply_button_theme(parent: Node) -> void:
@@ -245,8 +278,10 @@ func _move_unit_to_region(unit_id: int, destination: int, actor := "player") -> 
 		if units[i].id == unit_id: unit_index = i; break
 	if unit_index < 0: return false
 	var unit: Dictionary = units[unit_index]
-	if actor == "player" and unit.side != player_side:
+	if actor == "player" and unit.side != "government":
 		feedback = "%s由%s控制，玩家不能越权调动" % [unit.name, _side_name(unit.side)]; _refresh_ui(); return false
+	if actor == "ai" and unit.side != "coup": return false
+	if actor != "player" and actor != "ai": return false
 	if coup_state == "active" and unit.side == "neutral":
 		feedback = "政变期间全国部队冻结：中立部队不可调动"; _refresh_ui(); return false
 	if coup_state == "active" and unit.side == "coup" and actor != "ai":
@@ -263,16 +298,19 @@ func _trigger_coup() -> void:
 func _coup_weekly() -> void:
 	if coup_state != "active" or ended: return
 	coup_turns += 1
-	var government_power := 0; var coup_power := 0
-	for unit in units:
-		if unit.side == "government": government_power += int(unit.strength)
-		elif unit.side == "coup": coup_power += int(unit.strength)
-	# The coup AI uses the same permission checked move path as the player.
-	var target := 0
+	# Three southern control points make troop movement matter: capital, radio,
+	# and barracks. The coup AI captures the weakest point through the same move
+	# permission path available to the player.
+	var target: int = coup_key_regions[0] if not coup_key_regions.is_empty() else 0
 	for unit in units:
 		if unit.side == "coup": _move_unit_to_region(unit.id, target, "ai")
-	coup_progress["government"] = clampi(int(coup_progress["government"]) + government_power / 5, 0, 100)
-	coup_progress["coup"] = clampi(int(coup_progress["coup"]) + coup_power / 6, 0, 100)
+	var government_power := 0; var coup_power := 0
+	for unit in units:
+		if not coup_key_regions.has(unit.region): continue
+		if unit.side == "government": government_power += int(unit.strength)
+		elif unit.side == "coup": coup_power += int(unit.strength)
+	coup_progress["government"] = clampi(int(coup_progress["government"]) + int(ceil(float(government_power) / 4.0)), 0, 100)
+	coup_progress["coup"] = clampi(int(coup_progress["coup"]) + int(ceil(float(coup_power) / 4.0)), 0, 100)
 	if coup_progress["government"] >= 100: _resolve_coup("government")
 	elif coup_progress["coup"] >= 100: _resolve_coup("coup")
 
@@ -312,9 +350,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_MIDDLE: dragging = event.pressed
 		elif event.pressed and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN) and MAP_RECT.grow(20).has_point(event.position):
 			var anchor := _unproject(event.position); zoom = clampf(zoom * (1.15 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 0.87), 1.0, 3.0)
-			var scale := minf(MAP_RECT.size.x / (LON_MAX - LON_MIN), MAP_RECT.size.y / (LAT_MAX - LAT_MIN)); offset = event.position - (MAP_RECT.get_center() - Vector2((LON_MAX - LON_MIN) * scale, (LAT_MAX - LAT_MIN) * scale) * zoom * 0.5 + Vector2(anchor.x, anchor.y) * scale * zoom); _clamp_view(); _sync_map_transform(); _map_layer.queue_redraw(); queue_redraw()
+			var scale := minf(MAP_RECT.size.x / (LON_MAX - LON_MIN), MAP_RECT.size.y / (LAT_MAX - LAT_MIN)); offset = event.position - (MAP_RECT.get_center() - Vector2((LON_MAX - LON_MIN) * scale, (LAT_MAX - LAT_MIN) * scale) * zoom * 0.5 + Vector2(anchor.x, anchor.y) * scale * zoom); _clamp_view(); _sync_map_transform(); queue_redraw()
 	elif event is InputEventMouseMotion and dragging:
-		offset += event.relative; _clamp_view(); _sync_map_transform(); _map_layer.queue_redraw(); queue_redraw()
+		offset += event.relative; _clamp_view(); _sync_map_transform(); queue_redraw()
 	elif event is InputEventKey and event.pressed:
 		if event.keycode == KEY_SPACE: _toggle_pause()
 		elif event.keycode == KEY_1: speed = 1.0
@@ -396,7 +434,7 @@ func _end_game(result: String) -> void:
 	ended = true; outcome = result; paused = true; active_event = ""; active_event_data = {}; feedback = result
 
 func _restart() -> void:
-	regions = _initial_regions.duplicate(true); selected = 0; paused = true; speed = 1.0; elapsed = 0.0; simulation = Simulation.new(); budget = 100; political_capital = 60; faction_support = {"军方": 58, "地方官僚": 52, "民间力量": 46}; stability = 62; talk_cooldown = 0; total_days = 0; event_index = 0; active_event = ""; active_event_data = {}; ended = false; outcome = ""; coup_state = "stable"; coup_turns = 0; coup_progress = {"government": 0, "coup": 0}; selected_unit = -1; _init_units(); feedback = "已重新开始：建议先改善民生，再恢复治安"; _refresh_ui(); _map_layer.queue_redraw(); queue_redraw()
+	regions = _initial_regions.duplicate(true); selected = 0; paused = true; speed = 1.0; elapsed = 0.0; simulation = Simulation.new(); budget = 100; political_capital = 60; faction_support = {"军方": 58, "地方官僚": 52, "民间力量": 46}; stability = 62; talk_cooldown = 0; total_days = 0; event_index = 0; active_event = ""; active_event_data = {}; ended = false; outcome = ""; coup_state = "stable"; coup_turns = 0; coup_progress = {"government": 0, "coup": 0}; selected_unit = -1; _find_coup_key_regions(); _init_units(); feedback = "已重新开始：建议先改善民生，再恢复治安"; _refresh_ui(); _map_layer.queue_redraw(); queue_redraw()
 
 func _refresh_ui() -> void:
 	if _labels.is_empty(): return
